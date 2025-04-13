@@ -15,20 +15,22 @@ type Customer struct {
 // barber is a goroutine that continuously looks for customers in the waiting room.
 // If a customer is available, the barber cuts their hair (simulated with a random sleep),
 // then signals the customer that the haircut is done.
-func barber(waitingRoom <-chan *Customer) {
+func barber(waitingRoom <-chan *Customer, ready chan struct{}) {
 	for {
 		select {
 		case customer := <-waitingRoom:
 			fmt.Printf("Barber: Starting haircut for Customer %d\n", customer.id)
-			// Simulate haircut time (random between 2000ms and 6000ms)
 			haircutTime := time.Duration(rand.Intn(4000)+2000) * time.Millisecond
 			fmt.Printf("Barber: Cutting hair for %v ms for Customer %d\n", haircutTime, customer.id)
 			time.Sleep(haircutTime)
 			fmt.Printf("Barber: Finished haircut for Customer %d\n", customer.id)
 			customer.done <- true
 		default:
-			// No customer waiting; barber goes to sleep for a moment
 			fmt.Println("Barber: No customers, barber is sleeping...")
+			if ready != nil {
+				ready <- struct{}{}
+				ready = nil
+			}
 			time.Sleep(1000 * time.Millisecond)
 		}
 	}
@@ -86,22 +88,20 @@ func customerGenerator(incoming chan<- *Customer) {
 }
 
 func main() {
-	// Seed the random number generator.
 	rand.Seed(time.Now().UnixNano())
 
 	waitingRoomCapacity := 6
-	// The waitingRoom channel simulates the FIFO waiting chairs.
 	waitingRoom := make(chan *Customer, waitingRoomCapacity)
-	// The incoming channel is used by customers to check in at the receptionist.
 	incoming := make(chan *Customer)
 
-	// Start the receptionist goroutine.
+	barberReady := make(chan struct{})
+
+	go barber(waitingRoom, barberReady)
+
+	<-barberReady
+
 	go receptionist(incoming, waitingRoom)
-	// Start the barber goroutine.
-	go barber(waitingRoom)
-	// Start generating customers.
 	go customerGenerator(incoming)
 
-	// Run indefinitely.
 	select {}
 }
