@@ -6,15 +6,11 @@ import (
 	"time"
 )
 
-// Customer represents a customer with an id and a channel to signal completion.
 type Customer struct {
 	id   int
 	done chan bool
 }
 
-// barber is a goroutine that continuously looks for customers in the waiting room.
-// If a customer is available, the barber cuts their hair (simulated with a random sleep),
-// then signals the customer that the haircut is done.
 func barber(waitingRoom <-chan *Customer, ready chan struct{}) {
 	for {
 		select {
@@ -36,8 +32,6 @@ func barber(waitingRoom <-chan *Customer, ready chan struct{}) {
 	}
 }
 
-// receptionist receives incoming customers and attempts to place them into the waiting room.
-// If the waiting room (a buffered channel) is full, the customer is turned away.
 func receptionist(incoming <-chan *Customer, waitingRoom chan<- *Customer) {
 	for customer := range incoming {
 		fmt.Printf("Receptionist: Greeting Customer %d\n", customer.id)
@@ -54,9 +48,6 @@ func receptionist(incoming <-chan *Customer, waitingRoom chan<- *Customer) {
 	}
 }
 
-// customerProcess represents a customer arriving at the shop.
-// The customer sends itself to the receptionist and then waits for a signal that either
-// the haircut is done or that the shop was full.
 func customerProcess(id int, incoming chan<- *Customer) {
 	customer := &Customer{
 		id:   id,
@@ -75,7 +66,6 @@ func customerProcess(id int, incoming chan<- *Customer) {
 	}
 }
 
-// customerGenerator spawns new customer goroutines at random intervals.
 func customerGenerator(incoming chan<- *Customer) {
 	id := 1
 	for {
